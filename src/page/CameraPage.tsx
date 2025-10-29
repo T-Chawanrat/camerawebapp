@@ -145,7 +145,14 @@ export default function CameraPage() {
                 d="M6 18L18 6M6 6l12 12"
               />
             </svg>
-            <span className="font-medium">สูงสุดไม่เกิน 5 รูป</span>
+            <span className="font-medium flex-1">สูงสุดไม่เกิน 5 รูป</span>
+            {/* ปุ่มปิด */}
+            <button
+              onClick={() => setShowLimitAlert(false)}
+              className="ml-3 text-white font-bold w-5 h-5 flex items-center justify-center rounded-full hover:bg-white/20"
+            >
+              ×
+            </button>
           </div>
         </div>
       )}

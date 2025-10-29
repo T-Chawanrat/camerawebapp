@@ -207,7 +207,6 @@ const ScanQR: React.FC = () => {
   const [resultText, setResultText] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [todos, setTodos] = useState<string[]>([]);
-  const [alertDuplicate, setAlertDuplicate] = useState<string | null>(null);
 
   const ensureReader = () => {
     if (!codeReaderRef.current) {
@@ -229,13 +228,11 @@ const ScanQR: React.FC = () => {
     codeReaderRef.current?.reset?.();
     stopTracks();
     setScanning(false);
-    setResultText("");
   };
 
   const startScan = async () => {
     setError(null);
     setResultText("");
-    setAlertDuplicate(null);
     const v = videoRef.current;
     if (!v) {
       setError("ไม่พบ element วิดีโอ");
@@ -247,27 +244,20 @@ const ScanQR: React.FC = () => {
     try {
       setScanning(true);
 
-      // ตั้งค่า getUserMedia ให้ใช้กล้องหลังและความละเอียดสูง
-      const constraints = {
-        video: {
-          facingMode: "environment",
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
-        },
-        audio: false,
-      };
-
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      v.srcObject = stream;
-      await v.play();
-
       await reader.decodeFromVideoDevice(
-        undefined,
+        undefined, // กล้องหลังอัตโนมัติ
         v,
         (result: Result | undefined, err: unknown) => {
           if (result) {
             const text = result.getText();
             setResultText(text);
+
+            // ถ้า barcode ซ้ำกับ list ให้แจ้งเตือน แต่ไม่เพิ่มเอง
+            if (todos.includes(text)) {
+              setError("แสกนไปแล้ว");
+            } else {
+              setError(null);
+            }
           } else if (err) {
             setError("กำลังค้นหา QR/Barcode...");
           }
@@ -281,17 +271,6 @@ const ScanQR: React.FC = () => {
     }
   };
 
-  const handleAdd = () => {
-    if (!resultText) return;
-    if (todos.includes(resultText)) {
-      setAlertDuplicate("แสกนไปแล้ว");
-      return;
-    }
-    setTodos((prev) => [...prev, resultText]);
-    setResultText("");
-    setAlertDuplicate(null);
-  };
-
   useEffect(() => {
     return () => {
       codeReaderRef.current?.reset?.();
@@ -299,43 +278,63 @@ const ScanQR: React.FC = () => {
     };
   }, []);
 
+  // ตรวจสอบก่อน add ว่า resultText ซ้ำหรือไม่
+  const handleAdd = () => {
+    if (!resultText) return;
+    if (todos.includes(resultText)) {
+      setError("แสกนไปแล้ว");
+      return;
+    }
+    setTodos((prev) => [...prev, resultText]);
+    setResultText("");
+    setError(null);
+  };
+
   return (
     <div className="min-h-screen p-4 bg-gray-100 font-thai">
       <div className="max-w-xl mx-auto">
         <h2 className="text-lg font-semibold mb-3">สแกน QR / Barcode</h2>
 
-        <div className="mb-3 relative rounded-lg overflow-hidden">
-          <video
-            ref={videoRef}
-            className="w-full h-96 object-cover"
-            playsInline
-            autoPlay
-            muted
-          />
-          <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-            <div className="w-11/12 h-5/6 border-2 border-brand-500 rounded-lg opacity-80" />
+        {/* Video Preview */}
+        <div className="mb-3">
+          <div className="relative rounded-lg overflow-hidden">
+            <video
+              ref={videoRef}
+              className="w-full h-96 object-cover"
+              playsInline
+              autoPlay
+              muted
+            />
+            <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+              <div className="w-11/12 h-5/6 border-2 border-brand-500 rounded-lg opacity-80" />
+            </div>
+          </div>
+
+          {/* ปุ่มสแกน */}
+          <div className="flex items-center justify-between mt-2 gap-2">
+            <button
+              onClick={() => (scanning ? stopScan() : startScan())}
+              className={`flex items-center gap-2 px-4 py-2 rounded-md text-white ${
+                scanning
+                  ? "bg-red-500 hover:bg-red-600"
+                  : "bg-brand-600 hover:bg-brand-700"
+              }`}
+            >
+              <Camera className="w-5 h-5" />
+              <span>{scanning ? "หยุดสแกน" : "เริ่มสแกน"}</span>
+            </button>
+
+            <div className="text-sm text-gray-600">
+              {error || (scanning ? "กำลังสแกน..." : "พร้อมสแกน")}
+            </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 mb-4">
-          <button
-            onClick={() => (scanning ? stopScan() : startScan())}
-            className={`flex items-center gap-2 px-4 py-2 rounded-md text-white ${
-              scanning
-                ? "bg-red-500 hover:bg-red-600"
-                : "bg-brand-600 hover:bg-brand-700"
-            }`}
-          >
-            <Camera className="w-5 h-5" />
-            <span>{scanning ? "หยุดสแกน" : "เริ่มสแกน"}</span>
-          </button>
-          <div className="text-sm text-gray-600">
-            {error || (scanning ? "กำลังสแกน..." : "พร้อมสแกน")}
-          </div>
-        </div>
-
+        {/* To-Do List */}
         <div className="mt-4">
           <h3 className="font-semibold mb-2">ผลลัพธ์จากการสแกน</h3>
+
+          {/* Input + Add */}
           <div className="flex gap-2 mb-3">
             <input
               type="text"
@@ -346,15 +345,18 @@ const ScanQR: React.FC = () => {
             />
             <button
               onClick={handleAdd}
-              className="px-4 py-2 bg-green-500 text-white rounded-md"
+              disabled={!resultText || todos.includes(resultText)}
+              className={`px-4 py-2 text-white rounded-md ${
+                !resultText || todos.includes(resultText)
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-green-500 hover:bg-green-600"
+              }`}
             >
               Add
             </button>
           </div>
-          {alertDuplicate && (
-            <p className="text-red-500 mb-2">{alertDuplicate}</p>
-          )}
 
+          {/* List */}
           <ul className="space-y-2">
             {todos.map((item, idx) => (
               <li
