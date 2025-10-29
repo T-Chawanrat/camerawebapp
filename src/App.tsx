@@ -1,8 +1,9 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 // import ProtectedRoute from "./store/ProtectRoute";
-import CameraPage from "./page/CameraPage";
+// import CameraPage from "./page/CameraPage";
+import ScanQR from "./page/ScanQR";
 import NotFound from "./page/NotFound";
-import SignIn from "./page/SignIn";
+// import SignIn from "./page/SignIn";
 
 export default function App() {
   return (
@@ -19,8 +20,9 @@ export default function App() {
         /> */}
 
         {/* Public Routes */}
-        <Route path="/" element={<SignIn />} />
-        <Route path="/camera" element={<CameraPage />} />
+        {/* <Route path="/" element={<SignIn />} /> */}
+        {/* <Route path="/" element={<CameraPage />} /> */}
+        <Route path="/" element={<ScanQR />} />
 
         {/* Fallback Route */}
         <Route path="*" element={<NotFound />} />
