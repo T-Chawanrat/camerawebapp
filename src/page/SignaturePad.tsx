@@ -1,39 +1,51 @@
 import { useRef } from "react";
 import SignatureCanvas from "react-signature-canvas";
 
-export default function SignaturePad() {
+interface SignaturePadProps {
+  onSignatureChange: (base64: string | null) => void;
+}
+
+export default function SignaturePad({ onSignatureChange }: SignaturePadProps) {
   const sigCanvas = useRef<SignatureCanvas>(null);
 
-  const clear = () => sigCanvas.current?.clear();
+  const clear = () => {
+    sigCanvas.current?.clear();
+    onSignatureChange(null);
+  };
 
-  // const save = () => {
-  //   const dataUrl = sigCanvas.current
-  //     ?.getTrimmedCanvas()
-  //     .toDataURL("image/png");
-  //   console.log("เซ็นแล้วได้รูป base64:", dataUrl);
-  // };
+  const handleEnd = () => {
+    if (sigCanvas.current && !sigCanvas.current.isEmpty()) {
+      // ใช้ toDataURL() โดยตรง ไม่ต้องใช้ getTrimmedCanvas()
+      const base64 = sigCanvas.current.toDataURL("image/png");
+      onSignatureChange(base64);
+    } else {
+      onSignatureChange(null);
+    }
+  };
 
   return (
-    <div className="flex flex-col items-center space-y-2">
-      <SignatureCanvas
-        ref={sigCanvas}
-        penColor="black"
-        canvasProps={{
-          width: 400,
-          height: 200,
-          className: "border border-gray-400 rounded-md",
-        }}
-      />
-      <div className="space-x-2 flex justify-end w-full">
-        <button onClick={clear} className=" px-6 py-1 bg-brand-600 text-white rounded-md">
-          ล้าง
-        </button>
-        {/* <button
-          onClick={save}
-          className="px-3 py-1 bg-brand-600 text-white rounded"
-        >
-          บันทึก
-        </button> */}
+    <div>
+      <label className="text-gray-700 font-semibold">ลายเซ็น</label>
+      <div className="flex flex-col items-center space-y-4 mt-2">
+        <SignatureCanvas
+          ref={sigCanvas}
+          penColor="black"
+          onEnd={handleEnd}
+          canvasProps={{
+            width: 350,
+            height: 180,
+            className: "border border-gray-400 rounded-md bg-white w-full",
+          }}
+        />
+        <div className="flex justify-end w-full">
+          <button
+            type="button"
+            onClick={clear}
+            className="px-6 py-2 bg-brand-600 text-white rounded-md"
+          >
+            ล้าง
+          </button>
+        </div>
       </div>
     </div>
   );
