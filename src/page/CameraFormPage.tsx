@@ -1,7 +1,9 @@
 import { Camera, Save } from "lucide-react";
 import { useState, useRef } from "react";
 import { useAuth } from "../store/Auth";
+import { toast } from "react-toastify";
 // import Button from "../components/Button";
+import SignaturePad from "./SignaturePad";
 import { BrowserMultiFormatReader } from "@zxing/browser";
 import type { Result } from "@zxing/library";
 
@@ -11,8 +13,8 @@ export default function CameraFormPage() {
   const { user } = useAuth();
   const [images, setImages] = useState<File[]>([]);
   const [showLimitAlert, setShowLimitAlert] = useState(false);
-  const [resultText, setResultText] = useState(""); // สำหรับ QR/Barcode
-
+  const [resultText, setResultText] = useState("");
+  const [remark, setRemark] = useState("");
   const cameraRef = useRef<HTMLInputElement>(null);
   const browseRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -97,10 +99,50 @@ export default function CameraFormPage() {
     }
   };
 
-  const handleSubmit = (e: React.MouseEvent<HTMLButtonElement>) => {
+  const handleSubmit = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
-    console.log("DO:", resultText);
-    console.log("Images:", images);
+
+    if (!resultText.trim()) {
+      toast.error("กรุณาสแกน QR Code หรือกรอกเลขที่บิล");
+      return;
+    }
+
+    if (images.length === 0) {
+      toast.error("กรุณาถ่ายรูปหรือเลือกรูปภาพ");
+      return;
+    }
+
+    const formData = new FormData();
+
+    formData.append("user_id", user?.user_id || "");
+    formData.append("receive_code", resultText);
+    formData.append("name", user?.first_name || "");
+    formData.append("surname", user?.last_name || "");
+    formData.append(
+      "license_plate",
+      user?.license_plate || "Null"
+    );
+    formData.append("warehouse_name", "");
+    formData.append("remark", remark);
+
+    images.forEach((file) => {
+      formData.append("images", file);
+    });
+
+    try {
+      const res = await fetch("http://localhost:8000/bills", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) throw new Error("Upload failed");
+      const data = await res.json();
+      toast.success("บันทึกสำเร็จ!");
+      console.log("response:", data);
+    } catch (err) {
+      console.error("Error:", err);
+      toast.error("เกิดข้อผิดพลาดในการบันทึก");
+    }
   };
 
   return (
@@ -215,19 +257,23 @@ export default function CameraFormPage() {
       </div>
 
       {/* หมายเหตุ */}
-      <div className="mt-2 flex flex-col">
+      <div className="mt-2 mb-4 flex flex-col">
         <label className="mb-2 text-gray-700 font-semibold">หมายเหตุ</label>
         <input
           type="text"
           placeholder="กรอกหมายเหตุ"
+          value={remark}
+          onChange={(e) => setRemark(e.target.value)}
           className="border border-gray-400 rounded-md px-3 py-2 focus:outline-none focus:border-brand-400 focus:ring-1 focus:ring-brand-400"
         />
       </div>
 
+      <SignaturePad />
+
       {/* Submit */}
       <button
-        onClick={handleSubmit} // ใช้แทน submit
-        className="mt-6 w-full bg-brand-600 hover:bg-brand-700 text-white py-3 rounded-lg flex items-center justify-center gap-2"
+        onClick={handleSubmit}
+        className="mt-6 w-full bg-brand-600 hover:bg-brand-700 text-white py-3 rounded-lg flex items-center justify-center gap-2 transition-all duration-200 active:scale-95 active:bg-brand-800 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <Save className="w-6 h-6" />
         <p className="text-md">บันทึก</p>
