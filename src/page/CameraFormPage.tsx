@@ -104,7 +104,7 @@ export default function CameraFormPage() {
   };
 
   return (
-    <form className="min-h-screen p-4 bg-gray-50 flex flex-col font-thai">
+    <form className="min-h-screen p-4 bg-gray-50 flex flex-col font-thai sm:hidden">
       {/* Header */}
       <div className="flex justify-between items-center mb-4">
         <span className="text-md font-semibold text-gray-700">{today}</span>
