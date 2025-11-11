@@ -15,6 +15,7 @@ export default function CameraFormPage() {
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [signatureBase64, setSignatureBase64] = useState<string | null>(null);
+  const [resetSignature, setResetSignature] = useState(false);
 
   const today = new Date().toLocaleDateString("th-TH", {
     weekday: "short",
@@ -75,8 +76,10 @@ export default function CameraFormPage() {
       formData.append("images", file);
     });
 
+    const apiUrl = import.meta.env.VITE_API_URL;
+
     try {
-      const res = await fetch("http://localhost:8000/bills", {
+      const res = await fetch(`${apiUrl}/bills`, {
         method: "POST",
         body: formData,
       });
@@ -84,6 +87,15 @@ export default function CameraFormPage() {
       if (!res.ok) throw new Error("Upload failed");
       const data = await res.json();
       toast.success("บันทึกสำเร็จ!");
+
+      setResultText("");
+      setImages([]);
+      setRemark("");
+      setSignatureBase64(null);
+      setScanning(false);
+      setError(null);
+      setResetSignature(true);
+      setTimeout(() => setResetSignature(false), 0);
       console.log("response:", data);
     } catch (err) {
       console.error("Error:", err);
@@ -118,7 +130,10 @@ export default function CameraFormPage() {
       <Remark value={remark} onChange={setRemark} />
 
       {/* Signature Pad */}
-      <SignaturePad onSignatureChange={setSignatureBase64} />
+      <SignaturePad
+        onSignatureChange={setSignatureBase64}
+        reset={resetSignature}
+      />
 
       {/* Submit Button */}
       <button

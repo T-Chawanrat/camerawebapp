@@ -1,11 +1,15 @@
-import { useRef } from "react";
+import { useRef, useEffect } from "react";
 import SignatureCanvas from "react-signature-canvas";
 
 interface SignaturePadProps {
   onSignatureChange: (base64: string | null) => void;
+  reset?: boolean;
 }
 
-export default function SignaturePad({ onSignatureChange }: SignaturePadProps) {
+export default function SignaturePad({
+  onSignatureChange,
+  reset,
+}: SignaturePadProps) {
   const sigCanvas = useRef<SignatureCanvas>(null);
 
   const clear = () => {
@@ -22,6 +26,10 @@ export default function SignaturePad({ onSignatureChange }: SignaturePadProps) {
       onSignatureChange(null);
     }
   };
+
+  useEffect(() => {
+    if (reset) clear();
+  }, [reset]);
 
   return (
     <div>
