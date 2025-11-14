@@ -94,8 +94,7 @@ export default function CameraFormPage() {
       setSignatureBase64(null);
       setScanning(false);
       setError(null);
-      setResetSignature(true);
-      setTimeout(() => setResetSignature(false), 0);
+      setResetSignature((prev) => !prev);
       console.log("response:", data);
     } catch (err) {
       console.error("Error:", err);

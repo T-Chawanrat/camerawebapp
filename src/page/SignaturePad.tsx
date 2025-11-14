@@ -19,7 +19,6 @@ export default function SignaturePad({
 
   const handleEnd = () => {
     if (sigCanvas.current && !sigCanvas.current.isEmpty()) {
-      // ใช้ toDataURL() โดยตรง ไม่ต้องใช้ getTrimmedCanvas()
       const base64 = sigCanvas.current.toDataURL("image/png");
       onSignatureChange(base64);
     } else {
@@ -28,7 +27,9 @@ export default function SignaturePad({
   };
 
   useEffect(() => {
-    if (reset) clear();
+    if (reset !== undefined) {
+      clear();
+    }
   }, [reset]);
 
   return (
