@@ -27,7 +27,8 @@ export default function ScanQR({
 
   const ensureReader = () => {
     if (!codeReaderRef.current) {
-      codeReaderRef.current = new BrowserMultiFormatReader() as ZXingReaderWithReset;
+      codeReaderRef.current =
+        new BrowserMultiFormatReader() as ZXingReaderWithReset;
     }
     return codeReaderRef.current!;
   };
@@ -67,6 +68,7 @@ export default function ScanQR({
             const text = result.getText();
             onResultChange(text);
             onErrorChange(null);
+            // onScanningChange(false);
           }
         }
       );
@@ -78,7 +80,12 @@ export default function ScanQR({
     }
   };
 
-  // Cleanup on unmount
+  useEffect(() => {
+    if (!scanning) {
+      stopScan();
+    }
+  }, [scanning]);
+
   useEffect(() => {
     return () => {
       stopScan();
