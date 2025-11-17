@@ -1,6 +1,5 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import ProtectedRoute from "./store/ProtectRoute";
-
 import CameraFormPage from "./page/CameraFormPage";
 import NotFound from "./page/NotFound";
 import SignIn from "./page/SignIn";
