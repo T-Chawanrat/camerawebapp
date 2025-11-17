@@ -1,14 +1,17 @@
 import { useState } from "react";
 import { useAuth } from "../store/Auth";
+import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { Save } from "lucide-react";
 import ScanQR from "./ScanQR";
 import Upload from "./Upload";
 import Remark from "./Remark";
 import SignaturePad from "./SignaturePad";
+import { Smartphone, ChevronDown , LogOut } from "lucide-react";
 
 export default function CameraFormPage() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [images, setImages] = useState<File[]>([]);
   const [resultText, setResultText] = useState("");
   const [remark, setRemark] = useState("");
@@ -16,6 +19,7 @@ export default function CameraFormPage() {
   const [error, setError] = useState<string | null>(null);
   const [signatureBase64, setSignatureBase64] = useState<string | null>(null);
   const [resetSignature, setResetSignature] = useState(false);
+  const [openUserMenu, setOpenUserMenu] = useState(false);
 
   const today = new Date().toLocaleDateString("th-TH", {
     weekday: "short",
@@ -102,46 +106,87 @@ export default function CameraFormPage() {
     }
   };
 
+  const handleLogout = () => {
+    logout();
+    navigate("/", { replace: true }); // หรือ "/" ให้ตรงกับ route ของคุณ
+  };
+
   return (
-    <form className="min-h-screen p-4 bg-gray-50 flex flex-col font-thai sm:hidden">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-4">
-        <span className="text-md font-semibold text-gray-700">{today}</span>
-        <span className="text-md font-semibold text-gray-700">
-          {user?.first_name} {user?.last_name}
-        </span>
+    <>
+      <form className="min-h-screen p-4 bg-gray-50 flex flex-col font-thai sm:hidden">
+        {/* Header */}
+        <div className="flex justify-between items-center mb-4">
+          <span className="text-md font-semibold text-gray-700">{today}</span>
+
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setOpenUserMenu((prev) => !prev)}
+              className="flex items-center gap-1 text-md font-semibold text-gray-700"
+            >
+              <span className="">
+                {user?.first_name} {user?.last_name}
+              </span>
+              <ChevronDown
+                className={`w-4 h-4 transition-transform ${
+                  openUserMenu ? "rotate-180" : ""
+                }`}
+              />
+            </button>
+
+            {openUserMenu && (
+              <div className="absolute right-0 mt-2 w-28 rounded-lg bg-white shadow-md border border-gray-200 z-10">
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="w-full text-left px-3 py-2 text-md font-semibold text-red-500"
+                >
+                 <LogOut className="w-4 h-4 inline-block mr-1" /> Logout
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* QR Scanner Section */}
+        <ScanQR
+          resultText={resultText}
+          onResultChange={setResultText}
+          scanning={scanning}
+          error={error}
+          onScanningChange={setScanning}
+          onErrorChange={setError}
+        />
+
+        {/* Image Upload Section */}
+        <Upload images={images} onImagesChange={setImages} />
+
+        {/* Remark Input */}
+        <Remark value={remark} onChange={setRemark} />
+
+        {/* Signature Pad */}
+        <SignaturePad
+          onSignatureChange={setSignatureBase64}
+          reset={resetSignature}
+        />
+
+        {/* Submit Button */}
+        <button
+          onClick={handleSubmit}
+          className="mt-6 w-full bg-brand-600 hover:bg-brand-700 text-white py-3 rounded-lg flex items-center justify-center gap-2 transition-all duration-200 active:scale-95 active:bg-brand-800 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <Save className="w-6 h-6" />
+          <p className="text-md">บันทึก</p>
+        </button>
+      </form>
+
+      {/* Desktop Warning */}
+      <div className="hidden sm:flex min-h-screen items-center justify-center bg-gray-100 flex-col">
+        <Smartphone className="w-20 h-20 text-gray-500 mb-4" />
+        <p className="text-gray-600 text-lg font-medium font-thai text-center px-6">
+          หน้านี้รองรับเฉพาะการใช้งานบนมือถือ
+        </p>
       </div>
-
-      {/* QR Scanner Section */}
-      <ScanQR
-        resultText={resultText}
-        onResultChange={setResultText}
-        scanning={scanning}
-        error={error}
-        onScanningChange={setScanning}
-        onErrorChange={setError}
-      />
-
-      {/* Image Upload Section */}
-      <Upload images={images} onImagesChange={setImages} />
-
-      {/* Remark Input */}
-      <Remark value={remark} onChange={setRemark} />
-
-      {/* Signature Pad */}
-      <SignaturePad
-        onSignatureChange={setSignatureBase64}
-        reset={resetSignature}
-      />
-
-      {/* Submit Button */}
-      <button
-        onClick={handleSubmit}
-        className="mt-6 w-full bg-brand-600 hover:bg-brand-700 text-white py-3 rounded-lg flex items-center justify-center gap-2 transition-all duration-200 active:scale-95 active:bg-brand-800 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        <Save className="w-6 h-6" />
-        <p className="text-md">บันทึก</p>
-      </button>
-    </form>
+    </>
   );
 }

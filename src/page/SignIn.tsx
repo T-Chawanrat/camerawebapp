@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Label from "../components/Label";
 import Input from "../components/InputField";
@@ -17,6 +17,11 @@ export default function SignIn() {
   // ใช้ zustand store
   const setUser = useAuth((state) => state.setUser);
   const setIsLoggedIn = useAuth((state) => state.setIsLoggedIn);
+  const logout = useAuth((state) => state.logout);
+
+  useEffect(() => {
+    logout();
+  }, [logout]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,10 +60,12 @@ export default function SignIn() {
   };
 
   return (
-   <div
-  className="min-h-screen flex flex-col items-center justify-center p-4 sm:hidden bg-brand-950  bg-no-repeat"
-  style={{ backgroundImage: "url('https://img2.pic.in.th/pic/grid-01.png')" }}
->
+    <div
+      className="min-h-screen flex flex-col items-center justify-center p-4 sm:hidden bg-brand-950  bg-no-repeat"
+      style={{
+        backgroundImage: "url('https://img2.pic.in.th/pic/grid-01.png')",
+      }}
+    >
       <img
         width={180}
         height={36}
@@ -66,7 +73,6 @@ export default function SignIn() {
         alt="Logo"
         className="mb-8"
       />
-    
 
       <div className="w-full max-w-xs">
         <h1 className="text-xl font-semibold text-gray-300 mb-2">Sign In</h1>
