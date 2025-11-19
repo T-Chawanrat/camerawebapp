@@ -34,15 +34,15 @@ export default function SignIn() {
 
     try {
       const response = await axios.post(
-        "https://api-admin.trantech.co.th/login/check",
+        // "https://api-admin.trantech.co.th/login/check",
+        "https://xsendwork.com/api/login",
         { username, password }
       );
       const data = response.data;
 
-      if (data.ok && data.rows) {
-        setUser(data.rows);
+      if (data.user) {
+        setUser(data.user);
         setIsLoggedIn(true);
-
         navigate("/camera", { replace: true });
       } else {
         setLoginError("Username or password incorrect");
@@ -58,6 +58,26 @@ export default function SignIn() {
       }
     }
   };
+
+  //     if (data.ok && data.rows) {
+  //       setUser(data.rows);
+  //       setIsLoggedIn(true);
+
+  //       navigate("/camera", { replace: true });
+  //     } else {
+  //       setLoginError("Username or password incorrect");
+  //     }
+  //   } catch (error: unknown) {
+  //     if (axios.isAxiosError(error)) {
+  //       setLoginError(
+  //         error.response?.data?.message ||
+  //           "An error occurred. Please try again."
+  //       );
+  //     } else {
+  //       setLoginError("An unknown error occurred.");
+  //     }
+  //   }
+  // };
 
   return (
     <>
