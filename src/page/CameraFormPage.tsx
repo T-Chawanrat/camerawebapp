@@ -8,6 +8,7 @@ import Upload from "./Upload";
 import Remark from "./Remark";
 import SignaturePad from "./SignaturePad";
 import { ChevronDown, LogOut } from "lucide-react";
+import QrFromImageButton from "./QrFromImageButton";
 
 export default function CameraFormPage() {
   const { user, logout } = useAuth();
@@ -154,6 +155,11 @@ export default function CameraFormPage() {
         error={error}
         onScanningChange={setScanning}
         onErrorChange={setError}
+      />
+
+      <QrFromImageButton
+        onResultChange={(text) => setResultText(text)}
+        onErrorChange={(msg) => setError(msg)}
       />
 
       {/* Image Upload Section */}
