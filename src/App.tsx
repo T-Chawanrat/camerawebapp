@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import CameraFormPage from "./page/CameraFormPage";
 import NotFound from "./page/NotFound";
 import SignIn from "./page/SignIn";
+import SearchSerial from "./page/SearchSerial";
 
 export default function App() {
   return (
@@ -21,6 +22,7 @@ export default function App() {
         {/* Public Routes */}
         <Route path="/" element={<SignIn />} />
         <Route path="/camera" element={<CameraFormPage />} />
+        <Route path="/sn" element={<SearchSerial />} />
 
         {/* Fallback Route */}
         <Route path="*" element={<NotFound />} />
