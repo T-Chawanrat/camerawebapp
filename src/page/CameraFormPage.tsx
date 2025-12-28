@@ -622,7 +622,7 @@ export default function CameraFormPage() {
       return;
     }
 
-  if (!reference || refRows.length === 0) {
+    if (!reference || refRows.length === 0) {
       toast.error("กรุณากดค้นหา S/N เพื่อให้ได้ REF ก่อนบันทึก");
       return;
     }
@@ -652,14 +652,10 @@ export default function CameraFormPage() {
     if (pendingCount > 0) {
       setPendingSerials(pendingSerialNumbers);
       setPendingTotal(totalCount);
-      setPendingModal({
-        open: true,
-        count: pendingCount,
-      });
+      setPendingModal({ open: true, count: pendingCount });
       return;
     }
 
-    // ถ้าไม่มี pending เลย → ยิง API สร้างบิลได้ทันที
     submitBill();
   };
 
