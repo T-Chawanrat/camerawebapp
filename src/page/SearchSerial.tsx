@@ -1,121 +1,106 @@
-import { useState, useEffect } from "react";
-import axios from "axios";
+import { useState } from "react";
 
 type BillData = {
   id: number;
   SERIAL_NO: string;
   REFERENCE: string;
+  warehouse_accept?: "Y" | "N" | null;
+  dc_accept?: "Y" | "N" | null;
 };
 
-type ApiResponse =
-  | BillData[]
-  | { data: BillData[] }
-  | { rows: BillData[] };
+type SearchBySerialResponse = {
+  success: boolean;
+  reference: string;
+  rows: BillData[];
+  count: number;
+  message?: string;
+};
 
-export default function SearchSerial() {
-  const [allData, setAllData] = useState<BillData[]>([]);
-  const [serialInput, setSerialInput] = useState("");
-  const [matchedReference, setMatchedReference] = useState<string | null>(null);
-  const [serialList, setSerialList] = useState<BillData[]>([]);
-  const [notFound, setNotFound] = useState(false);
+type Props = {
+  value: string; // serial input (ของคุณคือ resultText)
+  onChange: (v: string) => void; // setResultText
+  apiBaseUrl: string; // import.meta.env.VITE_API_URL
+  onFound: (payload: {
+    reference: string;
+    rows: BillData[];
+    serials: string[];
+  }) => void; // ส่งผลกลับไปให้หน้าหลัก
+  onError?: (msg: string | null) => void; // ให้หน้าหลักโชว์ error ได้
+};
 
-  const handleSearch = () => {
-    setNotFound(false);
-    setSerialList([]);
+export default function SearchSerial({
+  value,
+  onChange,
+  apiBaseUrl,
+  onFound,
+  onError,
+}: Props) {
+  const [loading, setLoading] = useState(false);
 
-    if (!serialInput.trim()) return;
-
-    if (!Array.isArray(allData)) {
-      console.error("allData is not array:", allData);
+  const handleSearch = async () => {
+    const serial = value.trim();
+    if (!serial) {
+      onError?.("กรุณาสแกนหรือกรอกเลขที่กล่อง (S/N) ก่อน");
       return;
     }
 
-    const found = allData.find(
-      (x) => x.SERIAL_NO.toLowerCase() === serialInput.toLowerCase()
-    );
+    setLoading(true);
+    onError?.(null);
 
-    if (!found) {
-      setMatchedReference(null);
-      setNotFound(true);
-      return;
+    try {
+      const res = await fetch(
+        `${apiBaseUrl}/bills-data/by-serial?serial=${encodeURIComponent(serial)}`
+      );
+
+      if (!res.ok) {
+        if (res.status === 404) {
+          onError?.("ไม่พบ S/N นี้ในระบบ");
+          return;
+        }
+        onError?.("ค้นหาไม่สำเร็จ (server error)");
+        return;
+      }
+
+      const json = (await res.json()) as SearchBySerialResponse;
+
+      const rows = json.rows || [];
+      onFound({
+        reference: json.reference,
+        rows,
+        serials: rows.map((x) => x.SERIAL_NO),
+      });
+    } catch (e) {
+      console.error(e);
+      onError?.("เกิดข้อผิดพลาดในการค้นหา");
+    } finally {
+      setLoading(false);
     }
-
-    setMatchedReference(found.REFERENCE);
-
-    const list = allData.filter((x) => x.REFERENCE === found.REFERENCE);
-    setSerialList(list);
   };
 
-  useEffect(() => {
-    axios
-      .get<ApiResponse>("https://xsendwork.com/api/bills-data")
-      .then((res) => {
-        const result = res.data;
-
-        let arr: BillData[] = [];
-
-        if (Array.isArray(result)) {
-          arr = result;
-        } else if ("data" in result && Array.isArray(result.data)) {
-          arr = result.data;
-        } else if ("rows" in result && Array.isArray(result.rows)) {
-          arr = result.rows;
-        } else {
-          console.error("Unexpected API format:", result);
-        }
-
-        setAllData(arr);
-      })
-      .catch((err) => console.error("API Error:", err));
-  }, []);
-
   return (
-    <div style={{ width: "350px", margin: "30px auto", fontFamily: "sans-serif" }}>
-      <h2>ค้นหา SERIAL_NO → ดูกลุ่ม REFERENCE</h2>
+    <div className="mt-2 mb-4 flex flex-col gap-2">
+      <label className="text-gray-700 font-semibold">เลขที่กล่อง (S/N)</label>
 
-      <input
-        type="text"
-        placeholder="ใส่ SERIAL_NO เช่น SHM25102422192"
-        value={serialInput}
-        onChange={(e) => setSerialInput(e.target.value)}
-        style={{ width: "100%", padding: "8px", marginBottom: "10px" }}
-      />
+      <div className="flex gap-2">
+        <input
+          type="text"
+          placeholder="S/N"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="flex-1 bg-white border border-gray-400 rounded-md px-3 py-2 focus:outline-none focus:border-brand-400 focus:ring-1 focus:ring-brand-400"
+        />
 
-      <button
-        onClick={handleSearch}
-        style={{
-          width: "100%",
-          padding: "10px",
-          background: "#007bff",
-          color: "white",
-          border: "none",
-          borderRadius: "5px",
-        }}
-      >
-        ค้นหา
-      </button>
-
-      {notFound && (
-        <p style={{ color: "red", marginTop: "10px" }}>
-          ❌ ไม่พบ SERIAL_NO นี้ในระบบ
-        </p>
-      )}
-
-      {matchedReference && (
-        <div style={{ marginTop: "20px" }}>
-          <h3>REFERENCE: {matchedReference}</h3>
-
-          <h4>SERIAL ทั้งหมดในกลุ่มนี้:</h4>
-
-          <ul>
-            {serialList.map((item) => (
-              <li key={item.id}>
-                {item.SERIAL_NO} (id: {item.id})
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+        <button
+          type="button"
+          onClick={handleSearch}
+          disabled={!value.trim() || loading}
+          className={`px-3 py-2 rounded-md text-white text-sm ${
+            loading ? "bg-gray-400" : "bg-brand-600 hover:bg-brand-700"
+          }`}
+        >
+          ค้นหา
+        </button>
+      </div>
     </div>
   );
 }

@@ -1,30 +1,27 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-// import ProtectedRoute from "./store/ProtectRoute";
+import ProtectedRoute from "./store/ProtectRoute"; // ✅ เปิดใช้
 import CameraFormPage from "./page/CameraFormPage";
 import NotFound from "./page/NotFound";
 import SignIn from "./page/SignIn";
-import SearchSerial from "./page/SearchSerial";
 
 export default function App() {
   return (
     <Router basename="/qr">
       <Routes>
-        {/* Protected Routes */}
-        {/* <Route
+        {/* Public */}
+        <Route path="/" element={<SignIn />} />
+
+        {/* Protected: role_id 1,6 เท่านั้น */}
+        <Route
           path="/camera"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={[1, 6]}>
               <CameraFormPage />
             </ProtectedRoute>
           }
-        /> */}
+        />
 
-        {/* Public Routes */}
-        <Route path="/" element={<SignIn />} />
-        <Route path="/camera" element={<CameraFormPage />} />
-        <Route path="/sn" element={<SearchSerial />} />
-
-        {/* Fallback Route */}
+        {/* Fallback */}
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Router>

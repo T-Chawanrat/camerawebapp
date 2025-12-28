@@ -10,6 +10,7 @@ export interface UserType {
   email?: string;
   license_plate?: string;
   warehouses?: unknown[];
+  role_id: number;
 }
 
 interface AuthStore {

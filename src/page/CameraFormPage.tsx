@@ -471,7 +471,7 @@
 //   );
 // }
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useAuth } from "../store/Auth";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -482,6 +482,7 @@ import Upload from "./Upload";
 import Remark from "./Remark";
 import SignaturePad from "./SignaturePad";
 import QrFromImageButton from "./QrFromImageButton";
+import SearchSerial from "./SearchSerial";
 
 // 👇 type สำหรับข้อมูลที่ใช้ค้นหา
 type BillData = {
@@ -491,12 +492,6 @@ type BillData = {
   warehouse_accept?: "Y" | "N" | null;
   dc_accept?: "Y" | "N" | null;
 };
-
-// 👇 ให้รองรับทั้งแบบ array ตรง ๆ และแบบ { data: [...] } / { rows: [...] }
-type BillsApiResponse =
-  | BillData[]
-  | { data: BillData[] }
-  | { rows: BillData[] };
 
 export default function CameraFormPage() {
   const { user, logout } = useAuth();
@@ -511,8 +506,8 @@ export default function CameraFormPage() {
   const [resetSignature, setResetSignature] = useState(false);
   const [openUserMenu, setOpenUserMenu] = useState(false);
 
-  const [allData, setAllData] = useState<BillData[]>([]);
-  const [searchingSerial, setSearchingSerial] = useState(false);
+  const [refRows, setRefRows] = useState<BillData[]>([]);
+
   const [reference, setReference] = useState<string | null>(null);
   const [serialsInReference, setSerialsInReference] = useState<string[]>([]);
 
@@ -529,79 +524,6 @@ export default function CameraFormPage() {
     month: "2-digit",
     year: "2-digit",
   });
-
-  // ⬇️ ดึงข้อมูล bills-data มาเก็บไว้ครั้งเดียวตอนเปิดหน้า
-  useEffect(() => {
-    const fetchBillsData = async () => {
-      try {
-        const apiUrl = import.meta.env.VITE_API_URL;
-        const res = await fetch(`${apiUrl}/bills-data`);
-
-        if (!res.ok) {
-          console.error("โหลดข้อมูล bills-data ไม่สำเร็จ");
-          return;
-        }
-
-        const json: BillsApiResponse = await res.json();
-
-        let arr: BillData[] = [];
-        if (Array.isArray(json)) {
-          arr = json;
-        } else if ("data" in json && Array.isArray(json.data)) {
-          arr = json.data;
-        } else if ("rows" in json && Array.isArray(json.rows)) {
-          arr = json.rows;
-        } else {
-          console.error("รูปแบบข้อมูล bills-data ไม่คาดคิด:", json);
-        }
-
-        setAllData(arr);
-      } catch (e) {
-        console.error("Error โหลด bills-data:", e);
-      }
-    };
-
-    fetchBillsData();
-  }, []);
-
-  // ⬇️ ฟังก์ชันค้นหา S/N → REFERENCE และดึง serial ทั้งกลุ่ม
-  const handleSearchSerial = () => {
-    const serial = resultText.trim();
-    if (!serial) {
-      setError("กรุณาสแกนหรือกรอกเลขที่กล่อง (S/N) ก่อน");
-      return;
-    }
-
-    setSearchingSerial(true);
-    setError(null);
-    setReference(null);
-    setSerialsInReference([]);
-
-    if (!Array.isArray(allData) || allData.length === 0) {
-      setError("ยังไม่มีข้อมูลสำหรับค้นหา (โหลดข้อมูลไม่สำเร็จ)");
-      setSearchingSerial(false);
-      return;
-    }
-
-    const found = allData.find(
-      (x) => x.SERIAL_NO.toLowerCase() === serial.toLowerCase()
-    );
-
-    if (!found) {
-      setError("ไม่พบ S/N นี้ในระบบ");
-      setSearchingSerial(false);
-      return;
-    }
-
-    setReference(found.REFERENCE);
-
-    const list = allData
-      .filter((x) => x.REFERENCE === found.REFERENCE)
-      .map((x) => x.SERIAL_NO);
-
-    setSerialsInReference(list);
-    setSearchingSerial(false);
-  };
 
   // ⭐ ฟังก์ชันรีเซ็ตฟอร์ม ใช้ทั้งตอน success ปกติ และตอนกด Yes ใน modal
   const resetForm = () => {
@@ -700,7 +622,7 @@ export default function CameraFormPage() {
       return;
     }
 
-    if (!reference) {
+  if (!reference || refRows.length === 0) {
       toast.error("กรุณากดค้นหา S/N เพื่อให้ได้ REF ก่อนบันทึก");
       return;
     }
@@ -716,7 +638,7 @@ export default function CameraFormPage() {
     }
 
     // 🔹 ทั้งหมดใน REF นี้ (ใช้เป็นตัวหาร เช่น 4/8)
-    const allItemsForRef = allData.filter((x) => x.REFERENCE === reference);
+    const allItemsForRef = refRows;
     const totalCount = allItemsForRef.length;
 
     // 🔹 เฉพาะที่ยังไม่รับเข้า (ตัวตั้ง เช่น 4/8)
@@ -792,69 +714,55 @@ export default function CameraFormPage() {
         onErrorChange={setError}
       />
 
-      {/* 🔍 ช่องกรอก S/N + ปุ่มค้นหา */}
-      <div className="mt-2 mb-4 flex flex-col gap-2">
-        <label className="text-gray-700 font-semibold">เลขที่กล่อง (S/N)</label>
+      <SearchSerial
+        value={resultText}
+        onChange={(v) => {
+          setResultText(v);
+          if (error) setError(null);
+          setReference(null);
+          setSerialsInReference([]);
+          setRefRows([]);
+        }}
+        apiBaseUrl={import.meta.env.VITE_API_URL}
+        onError={(msg) => setError(msg)}
+        onFound={({ reference, rows, serials }) => {
+          setReference(reference);
+          setRefRows(rows);
+          setSerialsInReference(serials);
+        }}
+      />
 
-        <div className="flex gap-2">
-          <input
-            type="text"
-            placeholder="S/N"
-            value={resultText}
-            onChange={(e) => {
-              setResultText(e.target.value);
-              if (error) setError(null);
-              setReference(null);
-              setSerialsInReference([]);
-            }}
-            className="flex-1 bg-white border border-gray-400 rounded-md px-3 py-2 focus:outline-none focus:border-brand-400 focus:ring-1 focus:ring-brand-400"
-          />
+      <QrFromImageButton
+        onResultChange={(text) => {
+          setResultText(text);
+          if (error) setError(null);
+        }}
+        onErrorChange={(msg) => setError(msg)}
+      />
 
-          <button
-            type="button"
-            onClick={handleSearchSerial}
-            disabled={!resultText.trim() || searchingSerial}
-            className={`px-3 py-2 rounded-md text-white text-sm ${
-              searchingSerial ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"
-            }`}
-          >
-            {searchingSerial ? "ค้นหา..." : "ค้นหา"}
-          </button>
+      {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
+
+      {reference && (
+        <div className="mt-3 p-3 border rounded-md bg-gray-50 text-sm">
+          <p>
+            REFERENCE:{" "}
+            <span className="font-semibold text-brand-700">{reference}</span>
+          </p>
+
+          {serialsInReference.length > 0 && (
+            <div className="mt-2">
+              <p className="font-semibold mb-1">
+                Serial ทั้งหมดใน REFERENCE นี้
+              </p>
+              <ul className="list-disc pl-5 space-y-0.5">
+                {serialsInReference.map((sn) => (
+                  <li key={sn}>{sn}</li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
-
-        <QrFromImageButton
-          onResultChange={(text) => {
-            setResultText(text);
-            if (error) setError(null);
-          }}
-          onErrorChange={(msg) => setError(msg)}
-        />
-
-        {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
-
-        {/* 📦 ผลลัพธ์การค้นหา REFERENCE + serial list */}
-        {reference && (
-          <div className="mt-3 p-3 border rounded-md bg-gray-50 text-sm">
-            <p>
-              REFERENCE:{" "}
-              <span className="font-semibold text-brand-700">{reference}</span>
-            </p>
-
-            {serialsInReference.length > 0 && (
-              <div className="mt-2">
-                <p className="font-semibold mb-1">
-                  Serial ทั้งหมดใน REFERENCE นี้
-                </p>
-                <ul className="list-disc pl-5 space-y-0.5">
-                  {serialsInReference.map((sn) => (
-                    <li key={sn}>{sn}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+      )}
 
       {/* 📤 Upload */}
       <Upload images={images} onImagesChange={setImages} />
@@ -887,7 +795,8 @@ export default function CameraFormPage() {
             </h2>
 
             <p className="font-bold text-sm mb-3 text-red-600">
-              ยังมี {pendingModal.count}/{pendingTotal}  รายการใน REF นี้ที่ยัง ไม่ได้รับเข้าคลัง
+              ยังมี {pendingModal.count}/{pendingTotal} รายการใน REF นี้ที่ยัง
+              ไม่ได้รับเข้าคลัง
             </p>
 
             {/* ⭐ รายการ SERIAL_NO */}
